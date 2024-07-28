@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Branch Manager</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<h1>Git Branch Manager</h1>
+<div>
+    <h2>Projects</h2>
+    <select id="projects" onchange="loadRepositories()"></select>
+    <button id="addProjectBtn" onclick="addProject()">Add Project</button>
+</div>
+<div>
+    <h2>Repositories</h2>
+    <select id="repositories" onchange="loadBranches()"></select>
+    <button id="addRepoBtn" onclick="addRepository()">Add Repository</button>
+</div>
+<div>
+    <h2>Branches</h2>
+    <select id="branches"></select>
+    <button id="checkoutBranchBtn" onclick="checkoutBranch()">Checkout</button>
+    <button id="refreshRepoBtn" onclick="refreshRepo()">Refresh</button>
+</div>
+<div>
+    <h2>CLI</h2>
+    <input type="text" id="cliCommand" placeholder="Enter command">
+    <button id="executeCommandBtn" onclick="executeCommand()">Execute</button>
+    <pre id="cliOutput"></pre>
+</div>
+<script>
+  let userRole = 'admin'; // Change this based on the logged-in user role
+
+  document.getElementById('addProjectBtn').style.display = userRole === 'admin' ? 'inline' : 'none';
+  document.getElementById('addRepoBtn').style.display = userRole === 'admin' ? 'inline' : 'none';
+  document.getElementById('checkoutBranchBtn').style.display = userRole === 'qa' ? 'inline' : 'none';
+  document.getElementById('refreshRepoBtn').style.display = userRole === 'qa' ? 'inline' : 'none';
+  document.getElementById('executeCommandBtn').style.display = userRole === 'dev' ? 'inline' : 'none';
+
+  async function fetchProjects() {
+    const response = await fetch('/projects');
+    const projects = await response.json();
+    const projectSelect = document.getElementById('projects');
+    projectSelect.innerHTML = '';
+    projects.forEach(project => {
+      const option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = project.name;
+      projectSelect.appendChild(option);
+    });
+  }
+
+  async function loadRepositories() {
+    const projectId = document.getElementById('projects').value;
+    const response = await fetch(`/projects/${projectId}/repositories`);
+    const repositories = await response.json();
+    const repoSelect = document.getElementById('repositories');
+    repoSelect.innerHTML = '';
+    repositories.forEach(repo => {
+      const option = document.createElement('option');
+      option.value = repo.id;
+      option.textContent = repo.path;
+      repoSelect.appendChild(option);
+    });
+  }
+
+  async function loadBranches() {
+    const repoId = document.getElementById('repositories').value;
+    const response = await fetch(`/repositories/${repoId}/branches`);
+    const branches = await response.json();
+    const branchSelect = document.getElementById('branches');
+    branchSelect.innerHTML = '';
+    branches.forEach(branch => {
+      const option = document.createElement('option');
+      option.value = branch;
+      option.textContent = branch;
+      branchSelect.appendChild(option);
+    });
+  }
+
+  async function addProject() {
+    const projectName = prompt('Enter project name');
+    const sshHost = prompt('Enter SSH host');
+    const sshUsername = prompt('Enter SSH username');
+    const sshPrivateKey = prompt('Enter SSH private key');
+
+    await fetch('/projects', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: projectName, sshHost, sshUsername, sshPrivateKey }),
+    });
+    fetchProjects();
+  }
+
+  async function addRepository() {
+    const projectId = document.getElementById('projects').value;
+    const repoPath = prompt('Enter repository path');
+
+    await fetch('/repositories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path: repoPath, project: { id: projectId } }),
+    });
+    loadRepositories();
+  }
+
+  async function checkoutBranch() {
+    const branch = document.getElementById('branches').value;
+    await fetch('/git/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ branch }),
+    });
+  }
+
+  async function refreshRepo() {
+    await fetch('/git/pull', {
+      method: 'POST',
+    });
+  }
+
+  async function executeCommand() {
+    const command = document.getElementById('cliCommand').value;
+    const response = await fetch('/git/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ command, host: 'your-host', username: 'your-username', privateKey: 'your-private-key' }),
+    });
+    const result = await response.text();
+    document.getElementById('cliOutput').textContent = result;
+  }
+
+  fetchProjects();
+</script>
+</body>
+</html>

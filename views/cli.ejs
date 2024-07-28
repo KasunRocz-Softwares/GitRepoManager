@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLI</title>
+</head>
+<body>
+<h1>Command Line Interface</h1>
+<input type="text" id="command" placeholder="Enter command">
+<button onclick="executeCommand()">Execute</button>
+<pre id="output"></pre>
+<script>
+  async function executeCommand() {
+    const command = document.getElementById('command').value;
+    const response = await fetch('/git/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ command, host: 'your-host', username: 'your-username', privateKey: 'your-private-key' })
+    });
+    const result = await response.text();
+    document.getElementById('output').textContent = result;
+  }
+</script>
+</body>
+</html>
